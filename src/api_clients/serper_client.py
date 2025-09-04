@@ -1,6 +1,8 @@
-from .base_client import BaseClient
-from src.utils.config import SERPER_API_KEY
-
+try:
+    from .base_client import BaseClient
+except ImportError:
+    from base_client import BaseClient
+from ..utils.config import SERPER_API_KEY
 
 class SerperClient(BaseClient):
     def __init__(self):
