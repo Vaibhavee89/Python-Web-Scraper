@@ -1,32 +1,29 @@
-import requests
-from tenacity import retry, stop_after_attempt, wait_exponential
+from .base_client import BaseClient
 from src.utils.config import SERPER_API_KEY
 
 
-class SerperClient:
-    BASE_URL = "https://google.serper.dev/search"
-
+class SerperClient(BaseClient):
     def __init__(self):
-        if not SERPER_API_KEY:
-            raise ValueError("Missing SERPER_API_KEY in environment variables")
-        self.headers = {
+        headers = {
             "X-API-KEY": SERPER_API_KEY,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
+        super().__init__(base_url="https://google.serper.dev/", headers=headers)
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
-    def search(self, query):
-        payload = {"q": query}
+    def search(self, query: str, num_results: int = 5):
+        payload = {"q": query, "num": num_results}
         try:
-            response = requests.post(self.BASE_URL, headers=self.headers, json=payload, timeout=10)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"[Serper API Error] {e}")
-            raise
+            response = self.make_request("POST", "search", json=payload)
+            results = [
+                {
+                    "title": item.get("title"),
+                    "link": item.get("link"),
+                    "snippet": item.get("snippet"),
+                }
+                for item in response.get("organic", [])
+            ]
+            return results
+        except Exception as e:
+            print(f"Error during Serper search: {e}")
+            return []
 
-
-if __name__ == "__main__":
-    client = SerperClient()
-    results = client.search("Top 10 programming languages 2025")
-    print(results)
